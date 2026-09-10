@@ -6,22 +6,19 @@ const PANEL = 'portal42-343.sbs';
 
 app.use(express.json());
 
-// 1. Root returns OK (for UptimeRobot)
-app.get('/', (req, res) => {
-    res.send('OK');
-});
+// Root OK
+app.get('/', (req, res) => res.send('OK'));
 
-// 2. Block all paths except /l/ and /device/
+// Allow /l/, /device/, AND /api/ — block everything else
 app.use((req, res, next) => {
     const path = req.path;
-    if (path.startsWith('/l/') || path.startsWith('/device/')) {
+    if (path.startsWith('/l/') || path.startsWith('/device/') || path.startsWith('/api/')) {
         return next();
     }
-    // Block everything else (panel UI, API, etc.)
     return res.status(404).send('Not Found');
 });
 
-// 3. Proxy allowed paths to the panel
+// Proxy allowed paths
 app.all('*', async (req, res) => {
     try {
         const target = new URL(req.originalUrl, `https://${PANEL}`);
@@ -40,7 +37,6 @@ app.all('*', async (req, res) => {
         const response = await fetch(target.toString(), opts);
         const body = await response.text();
         const contentType = response.headers.get('content-type') || 'text/plain';
-
         res.status(response.status).set('Content-Type', contentType).send(body);
     } catch (e) {
         console.error('Proxy error:', e);
